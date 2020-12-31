@@ -41,16 +41,23 @@ class MainWindow(QMainWindow):
 		# Layout Stuff
 		layout = QVBoxLayout()
 
+		# Widget creation
 		self.sl = MainSlider(self.mediaPlayer, Qt.Horizontal)
 
+		# Buttons
+		self.groupBox = ControlButtons("Controls", self.mediaPlayer)
+
+
+		# More Layout Stuff
 		layout.addWidget(self.sl)
+		layout.addWidget(self.groupBox)
 
 		mainWidget = QWidget()
 		mainWidget.setLayout(layout)
 		self.setCentralWidget(mainWidget)
 
 		# General Setup Stuff
-		self.resize(400, 600)
+		self.resize(400, 200)
 		self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
 		self.setWindowTitle("Music Player")
 		self.show()
@@ -64,6 +71,36 @@ class MainWindow(QMainWindow):
 			self.sl.setMaximum(self.mediaPlayer.metaData('Duration'))
 		else:
 			print("Status Changed")
+
+
+class ControlButtons(QGroupBox):
+	def __init__(self, title: str, mediaPlayer: QMediaPlayer, parent=None):
+		super().__init__(title, parent)
+		self.mediaPlayer = mediaPlayer
+
+		self.startButton = QPushButton("Start")
+		self.pauseButton = QPushButton("Pause")
+		self.stopButton = QPushButton("Stop")
+
+		self.startButton.clicked.connect(self.__startButtonClicked)
+		self.pauseButton.clicked.connect(self.__pauseButtonClicked)
+		self.stopButton.clicked.connect(self.__stopButtonClicked)
+
+		self.buttonBox = QGridLayout()
+
+		self.buttonBox.addWidget(self.startButton, 0, 0)
+		self.buttonBox.addWidget(self.pauseButton, 0, 1)
+		self.buttonBox.addWidget(self.stopButton, 0, 2)
+		self.setLayout(self.buttonBox)
+
+	def __startButtonClicked(self):
+		self.mediaPlayer.play()
+
+	def __pauseButtonClicked(self):
+		self.mediaPlayer.pause()
+
+	def __stopButtonClicked(self):
+		self.mediaPlayer.stop()
 
 
 class MainSlider(QSlider):
