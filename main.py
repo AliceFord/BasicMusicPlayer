@@ -12,7 +12,7 @@ from PyQt5.QtMultimedia import *
 
 
 class MainWindow(QMainWindow):
-	possibleDataSources = ["Local File", "Local Playlist", "Internet File"]  # TODO: Spotify
+	possibleDataSources = ["Local File", "Local Playlist", "Online File"]  # TODO: Spotify
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -22,26 +22,30 @@ class MainWindow(QMainWindow):
 		if dataSource == self.possibleDataSources[0]:
 			filter = "MP3 File (*.mp3)"
 			file, fileType = QFileDialog.getOpenFileUrl(self, "Audio File", filter=filter)
-			self.initMediaPlayer(dataSource, file=file)
+			self.initMediaPlayer(dataSource, data=file)
 		elif dataSource == self.possibleDataSources[1]:
 			directory = QFileDialog.getExistingDirectory(self, "Open Playlist", options=QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
-			self.initMediaPlayer(dataSource, directory=directory)
+			self.initMediaPlayer(dataSource, data=directory)
+		elif dataSource == self.possibleDataSources[2]:
+			data, _ = QInputDialog.getText(self, "Enter the URL of the file", "URL: ")
+			self.initMediaPlayer(dataSource, data=data)
 		self.initUI()
 
-	def initMediaPlayer(self, dataSource, file=None, directory=None):
+	def initMediaPlayer(self, dataSource, data=None):
 		self.mediaPlayer = QMediaPlayer()
 		self.playlist = QMediaPlaylist(self.mediaPlayer)
 		if dataSource == self.possibleDataSources[0]:
-			self.playlist.addMedia(QMediaContent(file))
+			self.playlist.addMedia(QMediaContent(data))
 			self.playlist.setCurrentIndex(0)
-			self.mediaPlayer.setPlaylist(self.playlist)
-			#self.mediaPlayer.setMedia(QMediaContent(file))
 		elif dataSource == self.possibleDataSources[1]:
-			for file in sorted(Path(directory).iterdir(), key=os.path.getmtime, reverse=True):
+			for file in sorted(Path(data).iterdir(), key=os.path.getmtime, reverse=True):
 				if os.path.splitext(file)[1] == ".mp3":
 					self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(file))))
 			self.playlist.setCurrentIndex(0)
-			self.mediaPlayer.setPlaylist(self.playlist)
+		elif dataSource == self.possibleDataSources[2]:
+			self.playlist.addMedia(QMediaContent(QUrl(data)))
+
+		self.mediaPlayer.setPlaylist(self.playlist)
 		self.mediaPlayer.setVolume(int(QAudio.convertVolume(50/100, QAudio.LogarithmicVolumeScale, QAudio.LinearVolumeScale)*100))
 		self.mediaPlayer.play()
 		self.mediaPlayer.mediaStatusChanged.connect(self.mediaChange)
@@ -108,6 +112,8 @@ class ControlButtons(QGroupBox):
 		self.startButton = QPushButton("Start")
 		self.pauseButton = QPushButton("Pause")
 		self.stopButton = QPushButton("Stop")
+		self.prevButton = QPushButton("Previous")
+		self.skipButton = QPushButton("Skip")
 		self.volumeLabel = QLabel("Volume:")
 		self.volumeControl = QSlider(Qt.Horizontal)
 
@@ -119,6 +125,8 @@ class ControlButtons(QGroupBox):
 		self.startButton.clicked.connect(self.__startButtonClicked)
 		self.pauseButton.clicked.connect(self.__pauseButtonClicked)
 		self.stopButton.clicked.connect(self.__stopButtonClicked)
+		self.prevButton.clicked.connect(self.__prevButtonClicked)
+		self.skipButton.clicked.connect(self.__skipButtonClicked)
 		self.volumeControl.valueChanged.connect(self.__volumeChanged)
 
 		self.buttonBox = QGridLayout()
@@ -126,8 +134,10 @@ class ControlButtons(QGroupBox):
 		self.buttonBox.addWidget(self.startButton, 0, 0)
 		self.buttonBox.addWidget(self.pauseButton, 0, 1)
 		self.buttonBox.addWidget(self.stopButton, 0, 2)
-		self.buttonBox.addWidget(self.volumeLabel, 1, 1, alignment=Qt.AlignCenter)
-		self.buttonBox.addWidget(self.volumeControl, 2, 0, 1, 3)
+		self.buttonBox.addWidget(self.prevButton, 1, 0)
+		self.buttonBox.addWidget(self.skipButton, 1, 2)
+		self.buttonBox.addWidget(self.volumeLabel, 2, 1, alignment=Qt.AlignCenter)
+		self.buttonBox.addWidget(self.volumeControl, 3, 0, 1, 3)
 		self.setLayout(self.buttonBox)
 
 	def __startButtonClicked(self):
@@ -139,8 +149,11 @@ class ControlButtons(QGroupBox):
 	def __stopButtonClicked(self):
 		self.mediaPlayer.stop()
 
+	def __prevButtonClicked(self):
+		self.mediaPlayer.playlist().setCurrentIndex(self.mediaPlayer.playlist().currentIndex()-1)
+
 	def __skipButtonClicked(self):
-		pass
+		self.mediaPlayer.playlist().setCurrentIndex(self.mediaPlayer.playlist().currentIndex()+1)
 
 	def __volumeChanged(self):
 		self.mediaPlayer.setVolume(int(QAudio.convertVolume(self.volumeControl.value()/100, QAudio.LogarithmicVolumeScale, QAudio.LinearVolumeScale)*100))
