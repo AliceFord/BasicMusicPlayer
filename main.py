@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
 		self.initUI()
 
 	def initUI(self):
+		## Menu Stuff
 		exitAct = QAction(QIcon('exit.png'), '&Exit', self)
 		exitAct.setShortcut('Ctrl+Q')
 		exitAct.setStatusTip('Exit application')
@@ -37,27 +38,18 @@ class MainWindow(QMainWindow):
 		fileMenu = menubar.addMenu('&File')
 		fileMenu.addAction(exitAct)
 
-
+		# Layout Stuff
 		layout = QVBoxLayout()
-		self.l1 = QLabel("Hello")
-		self.l1.setAlignment(Qt.AlignCenter)
-		layout.addWidget(self.l1)
 
-		self.sl = QSlider(Qt.Horizontal)
-		self.sl.setMinimum(0)
-		self.sl.setMaximum(300)
-		self.sl.setValue(0)
-		self.sl.setTickPosition(QSlider.TicksBelow)
-		self.sl.setTickInterval(5)
+		self.sl = MainSlider(self.mediaPlayer, Qt.Horizontal)
 
 		layout.addWidget(self.sl)
-		self.sl.valueChanged.connect(self.valuechange)
 
 		mainWidget = QWidget()
 		mainWidget.setLayout(layout)
 		self.setCentralWidget(mainWidget)
 
-
+		# General Setup Stuff
 		self.resize(400, 600)
 		self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
 		self.setWindowTitle("Music Player")
@@ -71,14 +63,24 @@ class MainWindow(QMainWindow):
 			print("Duration: ", self.mediaPlayer.metaData("Duration"))
 			self.sl.setMaximum(self.mediaPlayer.metaData('Duration'))
 		else:
-			print(1)
+			print("Status Changed")
+
+
+class MainSlider(QSlider):
+	def __init__(self, mediaPlayer, parent=None):
+		QSlider.__init__(self, parent)
+		self.mediaPlayer = mediaPlayer
+		self.setMinimum(0)
+		self.setMaximum(300)
+		self.setValue(0)
+		self.setTickPosition(QSlider.TicksBelow)
+		self.setTickInterval(5)
+		self.valueChanged.connect(self.valuechange)
 
 	def valuechange(self):
-		# size = self.sl.value()
-		# self.mediaPlayer.setPosition(size)
-		pass
-
-
+		if self.value() != self.mediaPlayer.position():
+			size = self.value()
+			self.mediaPlayer.setPosition(size)
 
 
 def main(args):
