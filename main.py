@@ -7,12 +7,24 @@ from PyQt5.QtMultimedia import *
 
 
 class MainWindow(QMainWindow):
+	possibleDataSources = ["Local File"]
+
 	def __init__(self, *args, **kwargs):
-		super().__init__()
-		self.currentPosition = 0
+		super().__init__(*args, **kwargs)
+		dataSource, notExit = QInputDialog.getItem(self, "Select Data Source", "Data Source: ", self.possibleDataSources, editable=False)
+		if not notExit:
+			sys.exit()
+		if dataSource == self.possibleDataSources[0]:
+			filter = "MP3 File (*.mp3)"
+			file, fileType = QFileDialog.getOpenFileUrl(self, "Audio File", filter=filter)
+		self.initMediaPlayer(dataSource, file)
+		self.initUI()
+
+	def initMediaPlayer(self, dataSource, file=None):
 		self.mediaPlayer = QMediaPlayer()
-		url = QUrl.fromLocalFile("C:\\Users\\olive\\Downloads\\Glacier.mp3")
-		self.mediaPlayer.setMedia(QMediaContent(url))
+		if dataSource == self.possibleDataSources[0]:
+			self.mediaPlayer.setMedia(QMediaContent(file))
+		self.mediaPlayer.setVolume(int(QAudio.convertVolume(50/100, QAudio.LogarithmicVolumeScale, QAudio.LinearVolumeScale)*100))
 		self.mediaPlayer.play()
 		self.mediaPlayer.mediaStatusChanged.connect(self.mediaChange)
 
@@ -22,8 +34,6 @@ class MainWindow(QMainWindow):
 		self.checkMusicPositionTimer.timeout.connect(self.updateSlider)
 
 		self.checkMusicPositionTimer.start()
-
-		self.initUI()
 
 	def initUI(self):
 		## Menu Stuff
@@ -58,7 +68,6 @@ class MainWindow(QMainWindow):
 
 		# General Setup Stuff
 		self.resize(400, 200)
-		self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
 		self.setWindowTitle("Music Player")
 		self.show()
 
@@ -81,16 +90,24 @@ class ControlButtons(QGroupBox):
 		self.startButton = QPushButton("Start")
 		self.pauseButton = QPushButton("Pause")
 		self.stopButton = QPushButton("Stop")
+		self.volumeControl = QSlider(Qt.Horizontal)
+
+		# Audio slider setup
+		self.volumeControl.setMinimum(0)
+		self.volumeControl.setMaximum(100)
+		self.volumeControl.setValue(50)
 
 		self.startButton.clicked.connect(self.__startButtonClicked)
 		self.pauseButton.clicked.connect(self.__pauseButtonClicked)
 		self.stopButton.clicked.connect(self.__stopButtonClicked)
+		self.volumeControl.valueChanged.connect(self.__volumeChanged)
 
 		self.buttonBox = QGridLayout()
 
 		self.buttonBox.addWidget(self.startButton, 0, 0)
 		self.buttonBox.addWidget(self.pauseButton, 0, 1)
 		self.buttonBox.addWidget(self.stopButton, 0, 2)
+		self.buttonBox.addWidget(self.volumeControl, 1, 0, 1, 3)
 		self.setLayout(self.buttonBox)
 
 	def __startButtonClicked(self):
@@ -101,6 +118,9 @@ class ControlButtons(QGroupBox):
 
 	def __stopButtonClicked(self):
 		self.mediaPlayer.stop()
+
+	def __volumeChanged(self):
+		self.mediaPlayer.setVolume(int(QAudio.convertVolume(self.volumeControl.value()/100, QAudio.LogarithmicVolumeScale, QAudio.LinearVolumeScale)*100))
 
 
 class MainSlider(QSlider):
