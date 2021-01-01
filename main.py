@@ -1,18 +1,21 @@
 import os
 import sys
+import time
 
 from pathlib import Path
 
+import requests
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtMultimedia import *
+from PyQt5.QtWebEngineWidgets import *
 
 # https://accounts.spotify.com/authorize?client_id=386a3771ccef433aa358c10d234bec34&response_type=code&redirect_uri=https:%2F%2Fgoogle.com%2F
 
 
 class MainWindow(QMainWindow):
-	possibleDataSources = ["Local File", "Local Playlist", "Online File"]  # TODO: Spotify
+	possibleDataSources = ["Local File", "Local Playlist", "Online File", "Spotify (30 second preview)"]  # TODO: Spotify
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -29,6 +32,16 @@ class MainWindow(QMainWindow):
 		elif dataSource == self.possibleDataSources[2]:
 			data, _ = QInputDialog.getText(self, "Enter the URL of the file", "URL: ")
 			self.initMediaPlayer(dataSource, data=data)
+		elif dataSource == self.possibleDataSources[3]:
+			self.spotifyLoginWidget = SpotifyLogin(self.spotifyLoginCode)
+			self.spotifyLoginWidget.show()
+
+		if dataSource != self.possibleDataSources[3]:
+			self.initUI()
+
+	def spotifyLoginCode(self, code):
+		self.spotifyToken = code
+		self.initMediaPlayer(self.possibleDataSources[3])
 		self.initUI()
 
 	def initMediaPlayer(self, dataSource, data=None):
@@ -36,15 +49,17 @@ class MainWindow(QMainWindow):
 		self.playlist = QMediaPlaylist(self.mediaPlayer)
 		if dataSource == self.possibleDataSources[0]:
 			self.playlist.addMedia(QMediaContent(data))
-			self.playlist.setCurrentIndex(0)
 		elif dataSource == self.possibleDataSources[1]:
 			for file in sorted(Path(data).iterdir(), key=os.path.getmtime, reverse=True):
 				if os.path.splitext(file)[1] == ".mp3":
 					self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(file))))
-			self.playlist.setCurrentIndex(0)
 		elif dataSource == self.possibleDataSources[2]:
 			self.playlist.addMedia(QMediaContent(QUrl(data)))
+		elif dataSource == self.possibleDataSources[3]:
+			r = requests.get('https://api.spotify.com/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp', headers={"Authorization": f"Bearer BQBQb8J1n5qtr-FAFNKMjRNs-eOzf8RKWB_6sJ6IV5xuv01qy2HvpDZRtpbZbY6dv6fWN_Bta_EysffVZ3cr18QaUKWuDCN5JVkkpiJvp5DPUCql3TbFLdJ5P7JDaAVhpSXms8slFCnt1jW-"})
+			self.playlist.addMedia(QMediaContent(QUrl(r.json()['preview_url'])))
 
+		self.playlist.setCurrentIndex(0)
 		self.mediaPlayer.setPlaylist(self.playlist)
 		self.mediaPlayer.setVolume(int(QAudio.convertVolume(50/100, QAudio.LogarithmicVolumeScale, QAudio.LinearVolumeScale)*100))
 		self.mediaPlayer.play()
@@ -75,10 +90,7 @@ class MainWindow(QMainWindow):
 
 		# Widget creation
 		self.sl = MainSlider(self.mediaPlayer, Qt.Horizontal)
-
-		# Buttons
 		self.groupBox = ControlButtons("Controls", self.mediaPlayer)
-
 
 		# More Layout Stuff
 		layout.addWidget(self.sl)
@@ -103,6 +115,20 @@ class MainWindow(QMainWindow):
 		else:
 			print("Status Changed: ", status)
 
+
+class SpotifyLogin(QWidget):
+	def __init__(self, codeToRun):
+		super(SpotifyLogin, self).__init__()
+		self.codeToRun = codeToRun
+		self.web = QWebEngineView()
+		self.web.setUrl(QUrl('https://accounts.spotify.com/authorize?client_id=386a3771ccef433aa358c10d234bec34&response_type=code&redirect_uri=https:%2F%2Fgoogle.com%2F'))
+		self.web.urlChanged.connect(self.getTokenFromUrl)
+		self.web.show()
+
+	def getTokenFromUrl(self):
+		if str(self.web.url()).find("code=") != -1:
+			print(self.web.url())
+			self.codeToRun(str(self.web.url())[str(self.web.url()).find("code=")+5:str(self.web.url()).find("')")])
 
 class ControlButtons(QGroupBox):
 	def __init__(self, title: str, mediaPlayer: QMediaPlayer, parent=None):
