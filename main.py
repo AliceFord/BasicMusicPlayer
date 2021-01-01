@@ -15,7 +15,7 @@ from PyQt5.QtWebEngineWidgets import *
 
 
 class MainWindow(QMainWindow):
-	possibleDataSources = ["Local File", "Local Playlist", "Online File", "Spotify (30 second preview)"]  # TODO: Spotify
+	possibleDataSources = ["Local File", "Local Playlist", "Online File", "Spotify (30 second preview)"]
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
