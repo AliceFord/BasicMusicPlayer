@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
 		elif dataSource == self.possibleDataSources[2]:
 			self.playlist.addMedia(QMediaContent(QUrl(data)))
 		elif dataSource == self.possibleDataSources[3]:
-			r = requests.get('https://api.spotify.com/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp', headers={"Authorization": f"Bearer BQBQb8J1n5qtr-FAFNKMjRNs-eOzf8RKWB_6sJ6IV5xuv01qy2HvpDZRtpbZbY6dv6fWN_Bta_EysffVZ3cr18QaUKWuDCN5JVkkpiJvp5DPUCql3TbFLdJ5P7JDaAVhpSXms8slFCnt1jW-"})
+			r = requests.get('https://api.spotify.com/v1/tracks/3n3Ppam7vgaVa1iaRUc9Lp', headers={"Authorization": f"Bearer {self.spotifyToken}"})
 			self.playlist.addMedia(QMediaContent(QUrl(r.json()['preview_url'])))
 
 		self.playlist.setCurrentIndex(0)
